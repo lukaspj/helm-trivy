@@ -3,7 +3,7 @@
 version="$(cat plugin.yaml | grep "version" | cut -d '"' -f 2)"
 latest_version=$(curl -Is "https://github.com/ObjectifLibre/helm-trivy/releases/latest" | grep -i "Location" | cut -d'/' -f 8 | tr -d "\r")
 
-echo "Installing helm-trivy ${latest_version} ..."
+echo "Installing helm-trivy version: ${latest_version} ..."
 
 mkdir -p $HELM_PLUGIN_DIR
 cd $HELM_PLUGIN_DIR
