@@ -2,8 +2,6 @@
 
 version="$(cat plugin.yaml | grep "version" | cut -d '"' -f 2)"
 latest_version=$(curl -Is "https://github.com/ObjectifLibre/helm-trivy/releases/latest" | grep -i "Location" | cut -d'/' -f 8 | tr -d "\r")
-curl -Is "https://github.com/ObjectifLibre/helm-trivy/releases/latest"
-curl -Is "https://github.com/ObjectifLibre/helm-trivy/releases/latest" | grep -i "Location"
 
 echo "Installing helm-trivy ${latest_version} ..."
 
