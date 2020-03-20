@@ -191,8 +191,6 @@ func main() {
 			log.Fatalf("Could not create cache dir: %v", err)
 		}
 		defer os.RemoveAll(cacheDir)
-		log.Debugf("Using %v as cache directory for vuln db", cacheDir)
-		log.Debugf("Using %v as user for vulnerability scanning", trivyUser)
 
 		go func(cacheDir string) {
 			sigCh := make(chan os.Signal)
@@ -202,6 +200,8 @@ func main() {
 			os.Exit(0)
 		}(cacheDir)
 	}
+	log.Debugf("Using %v as cache directory for vuln db", cacheDir)
+	log.Debugf("Using %v as user for vulnerability scanning", trivyUser)
 
 	scanChart(chart, jsonOutput, ctx, cli, cacheDir, trivyArgs, trivyUser, templateSet, templateValues, chartVersion)
 }
