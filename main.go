@@ -59,7 +59,7 @@ ScannerLoop:
 	return nil, images
 }
 
-func scanImage(image string, ctx context.Context, cli *client.Client, cacheDir string, json bool, trivyOpts string, trivyUser string) string {
+func scanImage(image string, ctx context.Context, cli *client.Client, cacheDir string, json bool, trivyOpts string, trivyUser string, dockerUser string, dockerPass string) string {
 	tout, _ := exec.Command("ls", "-la", cacheDir).Output()
 	log.Debugf("Tmp dir: %s", tout)
 	tout, _ = exec.Command("id").Output()
@@ -69,6 +69,7 @@ func scanImage(image string, ctx context.Context, cli *client.Client, cacheDir s
 		Cmd:   []string{"--cache-dir", "/.cache"},
 		Tty:   true,
 		User:  trivyUser,
+		Env: []string{"TRIVY_USERNAME=" + dockerUser, "TRIVY_PASSWORD=" + dockerPass},
 	}
 	if json {
 		config.Cmd = append(config.Cmd, "-f", "json")
@@ -107,7 +108,7 @@ func scanImage(image string, ctx context.Context, cli *client.Client, cacheDir s
 	return string(outputContent)
 }
 
-func scanChart(chart string, json bool, ctx context.Context, cli *client.Client, cacheDir string, trivyOpts string, trivyUser string, templateSet string, templateValues string, chartversion string) {
+func scanChart(chart string, json bool, ctx context.Context, cli *client.Client, cacheDir string, trivyOpts string, trivyUser string, dockerUser string, dockerPass string, templateSet string, templateValues string, chartversion string) {
 	log.Infof("Scanning chart %s", chart)
 	jsonOutput := ""
 	if err, images := getChartImages(chart, templateSet, templateValues, chartversion); err != nil {
@@ -119,7 +120,7 @@ func scanChart(chart string, json bool, ctx context.Context, cli *client.Client,
 		log.Debugf("Found images for chart %v: %v", chart, images)
 		for _, image := range images {
 			log.Debugf("Scanning image %v", image)
-			output := scanImage(image, ctx, cli, cacheDir, json, trivyOpts, trivyUser)
+			output := scanImage(image, ctx, cli, cacheDir, json, trivyOpts, trivyUser, dockerUser, dockerPass)
 			if json {
 				jsonOutput += output
 			} else {
@@ -142,6 +143,9 @@ func main() {
 	var trivyArgs = ""
 	var trivyUser = ""
 	var cacheDir = ""
+	
+	var dockerUser = ""
+	var dockerPass = ""
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: helm trivy [options] <helm chart>\n")
@@ -155,6 +159,8 @@ func main() {
 	flag.BoolVar(&noPull, "nopull", false, "Don't pull latest trivy image")
 	flag.StringVar(&trivyArgs, "trivyargs", "", "CLI args to passthrough to trivy")
 	flag.StringVar(&trivyUser, "trivyuser", "1000", "Specify user to run Trivy as")
+	flag.StringVar(&dockerUser, "dockeruser", "", "Specify Docker Auth username")
+	flag.StringVar(&dockerPass, "dockerpass", "", "Specify Docker Auth password")
 	flag.StringVar(&templateSet, "set", "", "Values to set for helm chart, format: 'key1=value1,key2=value2'")
 	flag.StringVar(&templateValues, "values", "", "Specify chart values in a YAML file or a URL")
 	flag.StringVar(&chartVersion, "version", "", "Specify chart version")
@@ -205,5 +211,5 @@ func main() {
 	log.Debugf("Using %v as cache directory for vuln db", cacheDir)
 	log.Debugf("Using %v as user for vulnerability scanning", trivyUser)
 
-	scanChart(chart, jsonOutput, ctx, cli, cacheDir, trivyArgs, trivyUser, templateSet, templateValues, chartVersion)
+	scanChart(chart, jsonOutput, ctx, cli, cacheDir, trivyArgs, trivyUser, dockerUser, dockerPass, templateSet, templateValues, chartVersion)
 }
