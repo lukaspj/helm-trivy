@@ -139,6 +139,7 @@ func main() {
 	var chartVersion = ""
 	var trivyArgs = ""
 	var trivyUser = ""
+	var cacheDir = ""
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: helm trivy [options] <helm chart>\n")
@@ -151,10 +152,11 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
 	flag.BoolVar(&noPull, "nopull", false, "Don't pull latest trivy image")
 	flag.StringVar(&trivyArgs, "trivyargs", "", "CLI args to passthrough to trivy")
-	flag.StringVar(&trivyUser, "trivyUser", "1000", "Specify user to run Trivy as")
+	flag.StringVar(&trivyUser, "trivyuser", "1000", "Specify user to run Trivy as")
 	flag.StringVar(&templateSet, "set", "", "Values to set for helm chart, format: 'key1=value1,key2=value2'")
 	flag.StringVar(&templateValues, "values", "", "Specify chart values in a YAML file or a URL")
 	flag.StringVar(&chartVersion, "version", "", "Specify chart version")
+	flag.StringVar(&cacheDir, "cachedir", "", "Set vuln cache dir, if empty a tmp dir is used")
 	flag.Parse()
 
 	if debug {
@@ -183,22 +185,23 @@ func main() {
 		}
 		log.Info("Pulled latest trivy image")
 	}
+	if cacheDir == "" {
+		cacheDir, err := ioutil.TempDir("", "helm-trivy")
+		if err != nil {
+			log.Fatalf("Could not create cache dir: %v", err)
+		}
+		defer os.RemoveAll(cacheDir)
+		log.Debugf("Using %v as cache directory for vuln db", cacheDir)
+		log.Debugf("Using %v as user for vulnerability scanning", trivyUser)
 
-	cacheDir, err := ioutil.TempDir("", "helm-trivy")
-	if err != nil {
-		log.Fatalf("Could not create cache dir: %v", err)
+		go func(cacheDir string) {
+			sigCh := make(chan os.Signal)
+			signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+			<-sigCh
+			os.RemoveAll(cacheDir)
+			os.Exit(0)
+		}(cacheDir)
 	}
-	defer os.RemoveAll(cacheDir)
-	log.Debugf("Using %v as cache directory for vuln db", cacheDir)
-	log.Debugf("Using %v as user for vulnerability scanning", trivyUser)
-
-	go func(cacheDir string) {
-		sigCh := make(chan os.Signal)
-		signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-		<-sigCh
-		os.RemoveAll(cacheDir)
-		os.Exit(0)
-	}(cacheDir)
 
 	scanChart(chart, jsonOutput, ctx, cli, cacheDir, trivyArgs, trivyUser, templateSet, templateValues, chartVersion)
 }
