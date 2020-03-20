@@ -188,6 +188,7 @@ func main() {
 	}
 	defer os.RemoveAll(cacheDir)
 	log.Debugf("Using %v as cache directory for vuln db", cacheDir)
+	log.Debugf("Using %v as user for vulnerability scanning", trivyUser)
 
 	go func(cacheDir string) {
 		sigCh := make(chan os.Signal)
