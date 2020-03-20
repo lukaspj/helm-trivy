@@ -81,7 +81,7 @@ func scanImage(image string, ctx context.Context, cli *client.Client, cacheDir s
 	config.Cmd = append(config.Cmd, strings.Fields(trivyOpts)...)
 	config.Cmd = append(config.Cmd, image)
 	resp, err := cli.ContainerCreate(ctx, &config, &container.HostConfig{
-		Binds: []string{cacheDir + ":/.cache", "/var/run/docker.sock:/var/run/docker.sock"},
+		Binds: []string{cacheDir + ":/.cache"},
 	}, nil, "")
 	if err != nil {
 		log.Fatalf("Could not create trivy container: %v", err)
