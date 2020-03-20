@@ -60,7 +60,7 @@ ScannerLoop:
 }
 
 func scanImage(image string, ctx context.Context, cli *client.Client, cacheDir string, json bool, trivyOpts string, trivyUser string) string {
-	out, err := exec.Command("ls", "-la", cacheDir).Output()
+	tout, terr := exec.Command("ls", "-la", cacheDir).Output()
 	log.Debugf("Tmp dir: %s", out)
 	config := container.Config{
 		Image: "aquasec/trivy",
