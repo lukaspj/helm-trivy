@@ -59,12 +59,12 @@ ScannerLoop:
 	return nil, images
 }
 
-func scanImage(image string, ctx context.Context, cli *client.Client, cacheDir string, json bool, trivyOpts string) string {
+func scanImage(image string, ctx context.Context, cli *client.Client, cacheDir string, json bool, trivyOpts string, trivyUser string) string {
 	config := container.Config{
 		Image: "aquasec/trivy",
 		Cmd:   []string{"--cache-dir", "/.cache"},
 		Tty:   true,
-		User:  "1000",
+		User:  trivyUser,
 	}
 	if json {
 		config.Cmd = append(config.Cmd, "-f", "json")
@@ -103,7 +103,7 @@ func scanImage(image string, ctx context.Context, cli *client.Client, cacheDir s
 	return string(outputContent)
 }
 
-func scanChart(chart string, json bool, ctx context.Context, cli *client.Client, cacheDir string, trivyOpts string, templateSet string, templateValues string, chartversion string) {
+func scanChart(chart string, json bool, ctx context.Context, cli *client.Client, cacheDir string, trivyOpts string, trivyUser string, templateSet string, templateValues string, chartversion string) {
 	log.Infof("Scanning chart %s", chart)
 	jsonOutput := ""
 	if err, images := getChartImages(chart, templateSet, templateValues, chartversion); err != nil {
@@ -115,7 +115,7 @@ func scanChart(chart string, json bool, ctx context.Context, cli *client.Client,
 		log.Debugf("Found images for chart %v: %v", chart, images)
 		for _, image := range images {
 			log.Debugf("Scanning image %v", image)
-			output := scanImage(image, ctx, cli, cacheDir, json, trivyOpts)
+			output := scanImage(image, ctx, cli, cacheDir, json, trivyOpts, trivyUser)
 			if json {
 				jsonOutput += output
 			} else {
@@ -136,6 +136,7 @@ func main() {
 	var templateValues = ""
 	var chartVersion = ""
 	var trivyArgs = ""
+	var trivyUser = ""
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: helm trivy [options] <helm chart>\n")
@@ -148,6 +149,7 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
 	flag.BoolVar(&noPull, "nopull", false, "Don't pull latest trivy image")
 	flag.StringVar(&trivyArgs, "trivyargs", "", "CLI args to passthrough to trivy")
+	flag.StringVar(&trivyUser, "trivyUser", "1000", "Specify user to run Trivy as")
 	flag.StringVar(&templateSet, "set", "", "Values to set for helm chart, format: 'key1=value1,key2=value2'")
 	flag.StringVar(&templateValues, "values", "", "Specify chart values in a YAML file or a URL")
 	flag.StringVar(&chartVersion, "version", "", "Specify chart version")
@@ -195,5 +197,5 @@ func main() {
 		os.Exit(0)
 	}(cacheDir)
 
-	scanChart(chart, jsonOutput, ctx, cli, cacheDir, trivyArgs, templateSet, templateValues, chartVersion)
+	scanChart(chart, jsonOutput, ctx, cli, cacheDir, trivyArgs, trivyUser, templateSet, templateValues, chartVersion)
 }
